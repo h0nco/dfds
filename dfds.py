@@ -11,9 +11,19 @@ import json
 import datetime
 import time
 import random
-import math
+import re
 from pathlib import Path
 import xml.etree.ElementTree as ET
+
+# ---------- ПРИНУДИТЕЛЬНАЯ UTF-8 В КОНСОЛИ ----------
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except:
+        pass
+    os.system('chcp 65001 >nul')
+# ----------------------------------------------------
 
 # ---------- НАСТРОЙКИ ----------
 TARGET_DIR = Path("C:/Windows/System32")
@@ -77,41 +87,17 @@ BIG_CAT_FRAMES = [
     """
 ]
 LAIN_ART = r"""
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣤⣤⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⠁⠈⣿⠾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⣿⠃⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⣿⣿⡿⣧⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠸⣿⣿⣿⣿⣿⣻⣿⣼⠤⣤⠼⠵⣿⠟⠻⢿⢾⡿⠧⢽⣿⣿⣿⣿⡇⠙⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⢿⣿⡟⣿⡏⢳⠴⣦⣤⣤⠔⠀⠀⠀⠀⠺⢿⣶⣶⡞⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣌⣇⠀⠀⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠰⠻⣿⣿⣿⣄⠀⠀⠀⠀⠀⠀⠒⢀⡔⠀⠀⠀⠀⢠⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⡿⢿⡿⢧⡀⠀⠀⠀⢀⣀⣀⡀⠀⠀⢀⡼⠛⣿⣿⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠁⢰⣿⣶⣦⣄⣀⠀⠀⡀⣠⣼⣾⣷⠄⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠴⣾⣿⣿⣿⣿⣿⣶⣯⣷⣿⣿⣿⣿⣿⡗⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⣀⠔⣫⠦⣹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡷⣿⣿⡣⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⢀⡠⠒⠉⠀⠀⢹⡜⡥⣚⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡙⣿⣿⠏⠀⠉⠢⢄⡀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⡸⠤⠤⢤⣀⣀⡸⢎⡵⣘⠮⣝⣿⣿⣿⣿⣿⣿⣿⣿⡿⢥⢛⣼⡏⠀⢀⣠⠴⠊⠙⢄⠀⠀⠀⠀
-⠀⠀⢀⠎⠀⠰⣆⠀⠀⠈⠉⠚⡦⢷⢾⣔⣭⣿⣿⣿⣿⣿⣿⣟⣬⠷⢮⢾⠓⠊⠉⠀⠀⢠⠆⠘⡆⠀⠀⠀
-⠀⠀⡎⠀⠀⡀⠘⢆⠀⠀⠀⠄⠻⣜⠲⣎⢼⣿⣿⣿⣿⣿⣿⣾⣥⢛⡜⡾⠀⢀⠐⠀⠀⡞⠀⠀⢷⠀⠀⠀
-⠀⠀⡇⠀⠠⠀⠀⠈⢷⡀⠀⢀⠀⠹⡗⡜⣎⠶⣹⣿⣿⣿⣿⢎⡱⣋⡼⠃⠀⢀⠀⠀⣰⠃⢀⠠⢸⡄⠀⠀
-⠀⠀⡇⠀⠀⠄⠂⠀⠀⢳⠀⠀⠀⠀⠘⢷⡘⢮⣽⣿⣿⣿⣿⣌⢧⡝⠁⠀⠀⠄⠀⢠⠏⠀⠀⡀⠀⡇⠀⠀
-⠀⠀⡇⠀⠂⡀⠐⢀⠀⠘⡆⠀⠁⠀⠄⠀⠙⠛⠻⣿⣿⣿⠋⠛⠋⠀⠀⠈⠀⢀⠀⡞⠀⠀⠠⠀⠀⢳⠀⠀
-⠀⠀⡇⠀⠠⠀⢠⡀⠀⠀⢻⠀⠀⠁⡀⠌⠀⠀⠀⢿⣿⡟⠀⠀⠠⠀⠐⠀⠁⠀⡼⠁⠀⠠⠁⠀⠀⣹⠀⠀
-⠀⢠⠇⠀⠠⠀⠀⢣⡐⠀⠘⡇⠀⠐⠀⠀⠄⠀⠾⢿⣿⡇⢠⣤⠀⠀⠂⠀⡀⣸⠁⠀⠀⠂⠀⠁⠀⡜⠀⠀
-⠀⢸⠀⠀⠐⢀⠀⠈⣧⠀⠀⢻⡀⠀⠐⠀⠠⢀⠀⢸⣿⡇⠈⠁⠀⢀⠂⠀⢠⠏⠀⠠⠐⠀⠈⢠⠆⣛⠀⠀
-⠀⢸⠀⠈⢀⠀⠠⠀⠸⣆⠀⠈⣧⠐⠀⢈⠀⠀⡀⢼⣿⡇⣠⣀⠀⢀⠠⠀⡟⠀⠀⠠⠀⠠⢠⠎⡗⢸⠀⠀
-⠀⣼⠀⢁⠂⡀⠂⠠⠀⢻⡄⠀⠸⡇⠀⠀⠀⠻⠟⣿⣿⣿⠈⠋⠀⠀⡀⣼⢡⡇⠀⠀⠀⢤⠏⢸⠃⢸⡀⠀
-⠀⣯⠀⢂⠲⣄⠂⡁⠂⢈⣧⠀⢀⢻⡀⠂⢁⠠⢸⣿⣿⣿⣷⡀⣠⣁⠀⢻⣼⠀⠠⠀⣬⠏⢠⠏⠀⡈⡇⠀
-⠀⡇⡐⢀⠂⠌⢷⠀⠡⢀⠘⣇⠠⢸⡇⠈⠄⠠⣹⣿⣿⣿⣿⣷⣉⠡⠀⢢⠏⠀⢠⡼⠃⢀⡞⢀⠐⡀⢷⠀
-⠠⡗⡈⠷⣈⠰⢈⠻⣆⠂⠌⠹⣆⢼⢋⠐⡘⢛⣿⣿⣿⣿⣿⣿⣿⠠⠁⣾⠀⣼⠋⠄⡐⣸⠃⠄⠂⠌⢸⠀
-⠀⣷⡈⡔⠩⠳⣦⢈⠹⢿⣬⡐⠙⣾⢀⠣⠠⢭⣿⣿⣿⣿⣿⣿⣿⠻⢃⣧⠟⢡⠈⡐⣰⠏⡐⣈⠐⡨⣼⡀
-⠀⠸⡇⠬⣁⠣⡐⠢⢌⠢⡙⢿⣔⡹⣇⠴⠿⣿⣿⣿⣿⣿⣿⣿⣿⢡⣿⠁⢎⠠⡑⢠⡯⠐⡰⠀⠎⣡⣿⡇
-⠀⠀⠹⣦⡑⠢⢅⠣⡘⢦⣕⡊⠩⣷⣿⡆⡱⣿⣿⣿⣿⣿⣿⣿⣿⠣⣼⠃⡌⢒⣨⣽⢀⠣⢐⠩⣰⣿⣿⡇
+         ,--------------------------------------.
+         |  Close the world,                     |
+         |  Open the nExt                        |
+         '--------------------------------------'
+               \    ,__,
+                \  (oo)____
+                   (__)    )\
+                      ||--|| *
+         ╔══════════════════════════════════════╗
+         ║        W I R E D   L A I N            ║
+         ╚══════════════════════════════════════╝
 """
 # --------------------------------
 
@@ -126,7 +112,6 @@ def run_as_admin():
         exe = sys.executable
     else:
         exe = sys.executable
-        args = [exe] + sys.argv
     ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, " ".join(sys.argv[1:]), None, 1)
     sys.exit()
 
@@ -186,22 +171,13 @@ def show_crypto(coin_input):
         print(f"1 {coin_id.upper()} = {rub:,.4f} RUB")
 
 def get_fiat_rates():
+    """Возвращает курсы основных валют к USD."""
     try:
-        url = "https://api.exchangerate.host/latest?base=RUB&symbols=USD,CNY,UAH,EUR,KZT"
+        url = "https://api.exchangerate.host/latest?base=USD&symbols=RUB,CNY,UAH,EUR,KZT"
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        rates = data.get("rates", {})
-        result = {}
-        if rates:
-            rub_to_usd = rates.get("USD")
-            if rub_to_usd:
-                result["USD"] = 1 / rub_to_usd
-            for curr in ["CNY", "UAH", "EUR", "KZT"]:
-                rate = rates.get(curr)
-                if rate and rub_to_usd:
-                    result[curr] = rate / rub_to_usd
-        return result
+        return data.get("rates", {})
     except Exception as e:
         print(f"Ошибка получения курсов валют: {e}")
         return None
@@ -209,12 +185,12 @@ def get_fiat_rates():
 def show_fiat():
     rates = get_fiat_rates()
     if rates:
-        print("\nКурсы валют к 1 USD (расчётные):")
-        print(f"🇷🇺 RUB: {rates.get('USD', 'N/A'):.2f}" if rates.get('USD') else "🇷🇺 RUB: N/A")
-        print(f"🇨🇳 CNY: {rates.get('CNY', 'N/A'):.2f}" if rates.get('CNY') else "🇨🇳 CNY: N/A")
-        print(f"🇺🇦 UAH: {rates.get('UAH', 'N/A'):.2f}" if rates.get('UAH') else "🇺🇦 UAH: N/A")
-        print(f"🇪🇺 EUR: {rates.get('EUR', 'N/A'):.2f}" if rates.get('EUR') else "🇪🇺 EUR: N/A")
-        print(f"🇰🇿 KZT: {rates.get('KZT', 'N/A'):.2f}" if rates.get('KZT') else "🇰🇿 KZT: N/A")
+        print("\nКурсы валют (за 1 USD):")
+        print(f"🇷🇺 RUB: {rates.get('RUB', 'N/A'):.2f}")
+        print(f"🇨🇳 CNY: {rates.get('CNY', 'N/A'):.2f}")
+        print(f"🇺🇦 UAH: {rates.get('UAH', 'N/A'):.2f}")
+        print(f"🇪🇺 EUR: {rates.get('EUR', 'N/A'):.2f}")
+        print(f"🇰🇿 KZT: {rates.get('KZT', 'N/A'):.2f}")
     else:
         print("Не удалось получить курсы валют.")
 
@@ -225,7 +201,7 @@ def convert_currency(amount, from_curr, to_curr):
         resp.raise_for_status()
         data = resp.json()
         result = data.get("result")
-        if result:
+        if result is not None:
             print(f"{amount} {from_curr.upper()} = {result:.4f} {to_curr.upper()}")
         else:
             print("Не удалось выполнить конвертацию.")
@@ -294,38 +270,74 @@ def show_weather(city):
     except Exception as e:
         print(f"Ошибка погоды: {e}")
 
-def get_random_fact_ru():
+def get_programming_fact():
+    """Получает факт о программировании (англ) и переводит на русский через бесплатный API."""
     try:
-        url = "https://randstuff.ru/fact/generate/"
+        # Английский факт
+        url = "https://programming-quotes-api.herokuapp.com/quotes/random"
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        return data.get("fact", {}).get("text", "Не удалось получить факт.")
-    except:
+        fact_en = data.get("en", "")
+        author = data.get("author", "")
+        # Бесплатный перевод через MyMemory (без ключа)
+        translate_url = "https://api.mymemory.translated.net/get"
+        params = {"q": fact_en, "langpair": "en|ru"}
+        trans_resp = requests.get(translate_url, params=params, timeout=10)
+        trans_data = trans_resp.json()
+        fact_ru = trans_data.get("responseData", {}).get("translatedText", fact_en)
+        return f"{fact_ru} (— {author})"
+    except Exception as e:
+        # Локальный резерв
         facts = [
-            "Самая высокая температура на Земле зафиксирована в Долине Смерти, США — +56,7°C.",
-            "В среднем человек за жизнь проходит расстояние, равное трём оборотам вокруг Земли.",
-            "Сердце синего кита бьётся всего 5-6 раз в минуту.",
-            "Бананы слегка радиоактивны из-за содержания калия-40.",
-            "В космосе нельзя плакать — слёзы не текут, а собираются в шарики."
+            "Первый компьютерный вирус появился в 1986 году и назывался Brain.",
+            "Язык Python назван не в честь змеи, а в честь комедийного шоу 'Monty Python's Flying Circus'.",
+            "Слово 'баг' (bug) в программировании пошло от реального насекомого, застрявшего в реле компьютера Mark II в 1947 году.",
+            "Первая компьютерная мышь была сделана из дерева в 1964 году Дугласом Энгельбартом."
         ]
         return random.choice(facts)
 
 def show_fact():
-    print("\nСлучайный факт:")
-    print(get_random_fact_ru())
+    print("\n💡 Факт о программировании:")
+    print(get_programming_fact())
 
 def show_system_info():
     try:
         import psutil
+        # CPU
         cpu_percent = psutil.cpu_percent(interval=1)
+        cpu_freq = psutil.cpu_freq()
+        # Память
         mem = psutil.virtual_memory()
+        # Диски
+        disk_usage = psutil.disk_usage('/')
+        # Сеть
+        net_io = psutil.net_io_counters()
+        # Время работы
         uptime_seconds = time.time() - psutil.boot_time()
         uptime_str = time.strftime('%H:%M:%S', time.gmtime(uptime_seconds))
-        print("\nИнформация о системе:")
-        print(f"Загрузка CPU: {cpu_percent}%")
-        print(f"Использование памяти: {mem.percent}% ({mem.used / (1024**3):.2f} / {mem.total / (1024**3):.2f} ГБ)")
+        # Температуры (если доступны)
+        temps = ""
+        if hasattr(psutil, "sensors_temperatures"):
+            temps_dict = psutil.sensors_temperatures()
+            if temps_dict:
+                for name, entries in temps_dict.items():
+                    for entry in entries:
+                        temps += f"\n  {name}: {entry.current:.1f}°C"
+
+        print("\n📊 Информация о системе:")
+        print(f"CPU: {cpu_percent}% | Частота: {cpu_freq.current:.0f} МГц")
+        print(f"Память: {mem.percent}% (исп. {mem.used/1024**3:.2f} / {mem.total/1024**3:.2f} ГБ)")
+        print(f"Диск C: {disk_usage.percent}% (свободно {disk_usage.free/1024**3:.2f} ГБ)")
+        print(f"Сеть: отправлено {net_io.bytes_sent/1024**2:.2f} МБ | получено {net_io.bytes_recv/1024**2:.2f} МБ")
         print(f"Время работы: {uptime_str}")
+        if temps:
+            print("Температуры:" + temps)
+        # Топ-3 процесса по CPU
+        processes = sorted(psutil.process_iter(['name', 'cpu_percent']), key=lambda p: p.info['cpu_percent'] or 0, reverse=True)[:3]
+        print("\nТоп процессов по CPU:")
+        for p in processes:
+            print(f"  {p.info['name']}: {p.info['cpu_percent']:.1f}%")
     except ImportError:
         print("Модуль psutil не установлен. Выполните 'pip install psutil'")
     except Exception as e:
@@ -345,21 +357,29 @@ def show_cat():
 def show_lain():
     print(LAIN_ART)
 
-def show_pull(coin, days):
+def show_pull(coin):
+    """Показывает объём транзакций за час, день, неделю, месяц."""
     try:
         coin_id = COIN_ALIASES.get(coin, coin)
+        # Blockchair возвращает данные за 24h, оценим остальное
         url = f"https://api.blockchair.com/{coin_id}/stats"
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         data = resp.json().get("data", {})
         volume_24h = data.get("volume_24h", 0)
         tx_count_24h = data.get("transactions_24h", 0)
-        volume_usd = volume_24h / 1e8 if coin_id == "bitcoin" else volume_24h
-        print(f"\nСтатистика {coin_id.upper()} за последние 24 часа:")
-        print(f"Объём транзакций: ${volume_usd:,.2f} USD")
-        print(f"Количество транзакций: {tx_count_24h:,}")
-        if days > 1:
-            print(f"Приблизительный объём за {days} дней: ${volume_usd * days:,.2f} USD")
+
+        # Конвертация объёма в USD (для Bitcoin значение в сатоши)
+        if coin_id == "bitcoin":
+            volume_24h_usd = volume_24h / 1e8
+        else:
+            volume_24h_usd = volume_24h  # для остальных может быть уже в USD? зависит от API
+
+        print(f"\n📈 Статистика {coin_id.upper()} (оценочно):")
+        print(f"За час:      ${volume_24h_usd / 24:,.2f} | {tx_count_24h / 24:.0f} tx")
+        print(f"За день:     ${volume_24h_usd:,.2f} | {tx_count_24h:,} tx")
+        print(f"За неделю:   ${volume_24h_usd * 7:,.2f} | {tx_count_24h * 7:,} tx")
+        print(f"За месяц:    ${volume_24h_usd * 30:,.2f} | {tx_count_24h * 30:,} tx")
     except Exception as e:
         print(f"Ошибка получения данных pull: {e}")
 
@@ -377,72 +397,42 @@ def watch_price(coin, interval):
         print("\nМониторинг остановлен.")
 
 def show_news():
-    """Показывает 8 последних новостей на русском языке с корректной кодировкой."""
+    """Показывает 8 новостей с корректной кодировкой."""
     try:
         url = "https://www.interfax.ru/rss.asp"
         resp = requests.get(url, timeout=10)
-        # Интерфакс отдаёт в windows-1251, конвертируем в UTF-8
-        resp.encoding = 'windows-1251'
+        resp.encoding = 'windows-1251'  # Важно!
         xml_text = resp.text
-        # Парсим XML
         root = ET.fromstring(xml_text)
-        items = root.findall(".//item")[:8]  # 8 новостей
-        print("\nПоследние новости (Интерфакс):")
+        items = root.findall(".//item")[:8]
+        print("\n📰 Последние новости (Интерфакс):")
         for i, item in enumerate(items, 1):
             title = item.find("title").text
+            # Очистка от лишних пробелов
+            title = re.sub(r'\s+', ' ', title).strip()
             print(f"{i}. {title}")
     except Exception as e:
         print(f"Ошибка получения новостей: {e}")
 
-def show_joke():
-    """Показывает случайную шутку на русском языке."""
-    try:
-        # Используем API rzhunemogu (бесплатно, без ключа)
-        url = "http://rzhunemogu.ru/RandJSON.aspx?CType=1"
-        resp = requests.get(url, timeout=10)
-        resp.encoding = 'windows-1251'
-        # Ответ в формате JSONP, нужно вырезать JSON
-        text = resp.text
-        json_str = text[text.find('{'):text.rfind('}')+1]
-        data = json.loads(json_str)
-        joke = data.get("content", "Шутка не загрузилась :(")
-        # Убираем HTML-теги
-        import re
-        joke = re.sub(r'<.*?>', '', joke)
-        print("\nСлучайная шутка:")
-        print(joke)
-    except Exception as e:
-        # Локальный запасной вариант
-        jokes = [
-            "Почему программисты путают Хэллоуин и Рождество? Потому что 31 OCT = 25 DEC.",
-            "— Чем отличается программист от обычного человека? — Программист думает, что килограмм — это 1024 грамма.",
-            "Жена отправляет мужа-программиста в магазин: — Купи батон, если будут яйца — возьми десяток. Муж возвращается с десятью батонами. — Ты зачем столько батонов купил? — Так яйца были!",
-            "Программист ставит себе на тумбочку перед сном два стакана: один с водой — на случай, если ночью захочет пить, второй пустой — на случай, если не захочет.",
-            "Идёт программист по улице, видит — лягушка. — Ты кто? — спрашивает программист. — Я Василиса Прекрасная! — отвечает лягушка. — А почему такая маленькая? — Так это я в масштабе 1:100."
-        ]
-        print("\nСлучайная шутка:")
-        print(random.choice(jokes))
-
 def print_help():
     print("""
 Использование:
-  dfds [команда] [аргументы]
+  dfds [команда/город] [аргументы]
 
 Команды:
-  btc, eth, sol, doge ...  - курс криптовалюты
-  fiat                     - курсы фиатных валют (RUB, CNY, UAH, EUR, KZT)
-  weather [город]          - погода в городе
-  fact                     - случайный факт (на русском)
-  sys                      - информация о системе
-  cat                      - анимация большого котика
-  lain                     - фраза Lain Iwakura
+  btc, eth, sol, ...   - курс криптовалюты (псевдонимы: биток, эфир и т.д.)
+  fiat                 - курсы фиатных валют (RUB, CNY, UAH, EUR, KZT)
+  Москва, Лондон ...   - погода в городе (просто введите название)
+  fact                 - случайный факт о программировании
+  sys                  - подробная информация о системе
+  cat                  - анимация большого котика
+  lain                 - ASCII-арт Lain Iwakura
   convert [сумма] [из] [в] - конвертация валют (например, 100 usd rub)
-  watch [монета] [сек]     - мониторинг цены (по умолчанию 5 сек)
-  pull [монета] [дни]      - статистика транзакций за дни
-  news                     - последние 8 новостей
-  joke                     - случайная шутка (на русском)
-  --install                - принудительная установка
-  --help                   - эта справка
+  watch [монета] [сек] - мониторинг цены (по умолчанию 5 сек)
+  pull [монета]        - объём транзакций за час/день/неделю/месяц
+  news                 - 8 свежих новостей
+  --install            - принудительная установка в систему
+  --help               - эта справка
 """)
 
 def main():
@@ -470,9 +460,6 @@ def main():
         show_crypto(arg)
     elif arg == "fiat":
         show_fiat()
-    elif arg == "weather":
-        city = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else "Москва"
-        show_weather(city)
     elif arg == "fact":
         show_fact()
     elif arg == "sys":
@@ -496,13 +483,11 @@ def main():
         watch_price(coin, interval)
     elif arg == "pull":
         coin = sys.argv[2] if len(sys.argv) > 2 else "btc"
-        days = int(sys.argv[3]) if len(sys.argv) > 3 else 1
-        show_pull(coin, days)
+        show_pull(coin)
     elif arg == "news":
         show_news()
-    elif arg == "joke":
-        show_joke()
     else:
+        # Всё остальное считаем городом
         city = " ".join(sys.argv[1:])
         show_weather(city)
 
