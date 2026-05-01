@@ -1,38 +1,66 @@
+import os
 import re
+import shutil
 import subprocess
 import sys
 
 from dfds.config import WHITELIST_PORTS
 from dfds.utils import ensure_admin, check_windows
 
+
+def _find_system_tool(tool_name: str, fallback_path: str = None) -> str | None:
+    path = shutil.which(tool_name)
+    if path:
+        return path
+    if fallback_path and os.path.exists(fallback_path):
+        return fallback_path
+    return None
+
+
 def _get_process_info(pid: int):
-    try:
-        cmd = f'wmic process where processid={pid} get name,executablepath /format:csv'
-        out = subprocess.check_output(cmd, shell=True, text=True, encoding='cp866', errors='ignore')
-        lines = out.strip().splitlines()
-        if len(lines) >= 2:
-            parts = lines[1].split(',')
-            if len(parts) >= 3:
-                name = parts[1].strip()
-                path = parts[2].strip()
-                return name, path
-    except:
-        pass
-    try:
-        cmd = f'tasklist /FI "PID eq {pid}" /FO CSV'
-        out = subprocess.check_output(cmd, shell=True, text=True, encoding='cp866', errors='ignore')
-        lines = out.strip().splitlines()
-        if len(lines) >= 2:
-            parts = lines[1].split('","')
-            name = parts[0].strip('"')
-            return name, ""
-    except:
-        pass
+    wmic_path = _find_system_tool('wmic', r'C:\Windows\System32\wbem\wmic.exe')
+    if wmic_path:
+        try:
+            cmd = f'"{wmic_path}" process where processid={pid} get name,executablepath /format:csv'
+            out = subprocess.check_output(cmd, shell=True, text=True, encoding='cp866', errors='ignore')
+            lines = out.strip().splitlines()
+            if len(lines) >= 2:
+                parts = lines[1].split(',')
+                if len(parts) >= 3:
+                    name = parts[1].strip()
+                    path = parts[2].strip()
+                    return name, path
+        except:
+            pass
+
+    tasklist_path = _find_system_tool('tasklist', r'C:\Windows\System32\tasklist.exe')
+    if tasklist_path:
+        try:
+            cmd = f'"{tasklist_path}" /FI "PID eq {pid}" /FO CSV'
+            out = subprocess.check_output(cmd, shell=True, text=True, encoding='cp866', errors='ignore')
+            lines = out.strip().splitlines()
+            if len(lines) >= 2:
+                parts = lines[1].split('","')
+                name = parts[0].strip('"')
+                return name, ""
+        except:
+            pass
     return None, None
 
+
 def _get_open_ports():
+    netstat_path = _find_system_tool('netstat', r'C:\Windows\System32\netstat.exe')
+    if not netstat_path:
+        print("netstat not found. Cannot list ports.")
+        return []
+
+    try:
+        out = subprocess.check_output(f'"{netstat_path}" -ano', shell=True, text=True, encoding='cp866', errors='ignore')
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to run netstat: {e}")
+        return []
+
     ports = []
-    out = subprocess.check_output('netstat -ano', shell=True, text=True, encoding='cp866', errors='ignore')
     for line in out.splitlines():
         m = re.match(r'(TCP|UDP)\s+\S+:(\d+)\s+\S+:\d+\s+(\S+)\s+(\d+)', line.strip())
         if m:
@@ -43,10 +71,14 @@ def _get_open_ports():
                 continue
             name, path = _get_process_info(pid)
             ports.append({
-                'port': port, 'protocol': proto, 'pid': pid,
-                'name': name or "?", 'path': path or "?"
+                'port': port,
+                'protocol': proto,
+                'pid': pid,
+                'name': name or "?",
+                'path': path or "?"
             })
     return ports
+
 
 def _is_system(pid, name, path):
     if pid in (0, 4):
@@ -56,6 +88,7 @@ def _is_system(pid, name, path):
     if path and path.lower().startswith(('c:\\windows\\system32\\', 'c:\\windows\\syswow64\\')):
         return True
     return False
+
 
 def cmd_port_list():
     if not check_windows():
@@ -73,6 +106,7 @@ def cmd_port_list():
         if p['path'] and not p['path'].lower().startswith(('c:\\windows', 'c:\\program files')):
             marker += " [outside system dir]"
         print(f"{p['port']:<8} {p['protocol']:<8} {p['pid']:<8} {(p['name'])[:20]:<20} {(p['path'])[:50]:<50}{marker}")
+
 
 def cmd_port_close(port: int):
     if not check_windows():
@@ -96,6 +130,7 @@ def cmd_port_close(port: int):
         return
     subprocess.run(f'taskkill /F /PID {target["pid"]}', check=True, shell=True)
     print(f"Process {target['name']} (PID {target['pid']}) terminated. Port {port} freed.")
+
 
 def cmd_port_clean():
     if not check_windows():

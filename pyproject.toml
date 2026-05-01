@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "dfds"
 version = "2.0.0"
 description = "Security & utility CLI toolkit"
-authors = [{name = "Your Name", email = "you@example.com"}]
+authors = [{name = "h0nco"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.8"
