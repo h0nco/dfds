@@ -20,3 +20,9 @@ def ensure_admin(message: str):
     if not is_admin():
         print(message)
         run_as_admin()
+
+def check_windows() -> bool:
+    if sys.platform != "win32":
+        print("This command is Windows‑only.")
+        return False
+    return True

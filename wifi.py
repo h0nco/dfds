@@ -2,6 +2,8 @@ import re
 import subprocess
 import sys
 
+from dfds.utils import check_windows
+
 def _is_windows():
     return sys.platform == "win32"
 
@@ -24,8 +26,7 @@ def _get_current_ssid():
     return match.group(1).strip() if match else None
 
 def cmd_wifi_list():
-    if not _is_windows():
-        print("Wi‑Fi commands are Windows‑only.")
+    if not check_windows():
         return
     profiles = _get_wifi_profiles()
     if not profiles:
@@ -40,8 +41,7 @@ def cmd_wifi_list():
         print(f"{ssid[:30]:<30} {auth[:20]:<20} {active}")
 
 def cmd_wifi_remove(ssid: str):
-    if not _is_windows():
-        print("Wi‑Fi commands are Windows‑only.")
+    if not check_windows():
         return
     current = _get_current_ssid()
     if current == ssid:
@@ -55,8 +55,7 @@ def cmd_wifi_remove(ssid: str):
     print(f"Network '{ssid}' deleted.")
 
 def cmd_wifi_clean():
-    if not _is_windows():
-        print("Wi‑Fi commands are Windows‑only.")
+    if not check_windows():
         return
     profiles = _get_wifi_profiles()
     if not profiles:

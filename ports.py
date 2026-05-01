@@ -1,10 +1,23 @@
 import re
 import subprocess
+import sys
 
 from dfds.config import WHITELIST_PORTS
-from dfds.utils import ensure_admin
+from dfds.utils import ensure_admin, check_windows
 
 def _get_process_info(pid: int):
+    try:
+        cmd = f'wmic process where processid={pid} get name,executablepath /format:csv'
+        out = subprocess.check_output(cmd, shell=True, text=True, encoding='cp866', errors='ignore')
+        lines = out.strip().splitlines()
+        if len(lines) >= 2:
+            parts = lines[1].split(',')
+            if len(parts) >= 3:
+                name = parts[1].strip()
+                path = parts[2].strip()
+                return name, path
+    except:
+        pass
     try:
         cmd = f'tasklist /FI "PID eq {pid}" /FO CSV'
         out = subprocess.check_output(cmd, shell=True, text=True, encoding='cp866', errors='ignore')
@@ -29,19 +42,24 @@ def _get_open_ports():
             if any(p['port'] == port and p['protocol'] == proto for p in ports):
                 continue
             name, path = _get_process_info(pid)
-            ports.append({'port': port, 'protocol': proto, 'pid': pid, 'name': name, 'path': path})
+            ports.append({
+                'port': port, 'protocol': proto, 'pid': pid,
+                'name': name or "?", 'path': path or "?"
+            })
     return ports
 
 def _is_system(pid, name, path):
     if pid in (0, 4):
         return True
-    if name and name.lower() in ('svchost.exe', 'services.exe', 'lsass.exe', 'wininit.exe', 'csrss.exe', 'winlogon.exe'):
+    if name.lower() in ('svchost.exe', 'services.exe', 'lsass.exe', 'wininit.exe', 'csrss.exe', 'winlogon.exe'):
         return True
     if path and path.lower().startswith(('c:\\windows\\system32\\', 'c:\\windows\\syswow64\\')):
         return True
     return False
 
 def cmd_port_list():
+    if not check_windows():
+        return
     ports = _get_open_ports()
     if not ports:
         print("No open listening ports.")
@@ -54,9 +72,11 @@ def cmd_port_list():
             marker += " [non-standard]"
         if p['path'] and not p['path'].lower().startswith(('c:\\windows', 'c:\\program files')):
             marker += " [outside system dir]"
-        print(f"{p['port']:<8} {p['protocol']:<8} {p['pid']:<8} {(p['name'] or '?')[:20]:<20} {(p['path'] or '?')[:50]:<50}{marker}")
+        print(f"{p['port']:<8} {p['protocol']:<8} {p['pid']:<8} {(p['name'])[:20]:<20} {(p['path'])[:50]:<50}{marker}")
 
 def cmd_port_close(port: int):
+    if not check_windows():
+        return
     ensure_admin("Closing a port requires administrator rights.")
     ports = _get_open_ports()
     target = next((p for p in ports if p['port'] == port), None)
@@ -78,6 +98,8 @@ def cmd_port_close(port: int):
     print(f"Process {target['name']} (PID {target['pid']}) terminated. Port {port} freed.")
 
 def cmd_port_clean():
+    if not check_windows():
+        return
     ensure_admin("Cleaning non-standard ports requires administrator rights.")
     ports = _get_open_ports()
     to_close = [p for p in ports if p['port'] > 1024 and p['port'] not in WHITELIST_PORTS and not _is_system(p['pid'], p['name'], p['path'])]

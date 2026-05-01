@@ -1,7 +1,7 @@
 import typer
 
 from dfds import ip, crypto, convert, timer, passwords, ports, wifi
-from dfds.utils import ensure_admin
+from dfds.utils import check_windows
 
 app = typer.Typer(help="dfds – security & utility toolkit")
 
@@ -28,56 +28,66 @@ def cmd_convert(amount: float, from_curr: str, to_curr: str):
 def cmd_timer():
     timer.run_timer()
 
-@app.command("pass")
-def cmd_pass():
-    typer.echo("Use subcommands: generate, get, list, clear")
-    typer.echo("  dfds pass generate [service]")
-    typer.echo("  dfds pass get <key>")
-    typer.echo("  dfds pass list")
-    typer.echo("  dfds pass clear")
+pass_app = typer.Typer(help="Manage encrypted passwords")
 
-@app.command("pass-generate")
-def cmd_pass_generate(service: str = None):
+@pass_app.command("generate")
+def pass_generate(service: str = None):
     passwords.cmd_pass_generate(service)
 
-@app.command("pass-get")
-def cmd_pass_get(key: str):
+@pass_app.command("get")
+def pass_get(key: str):
     passwords.cmd_pass_get(key)
 
-@app.command("pass-list")
-def cmd_pass_list():
+@pass_app.command("list")
+def pass_list():
     passwords.cmd_pass_list()
 
-@app.command("pass-clear")
-def cmd_pass_clear():
+@pass_app.command("clear")
+def pass_clear():
     passwords.cmd_pass_clear()
+
+app.add_typer(pass_app, name="pass")
 
 @app.command("port")
 def cmd_port_list():
+    if not check_windows():
+        return
     ports.cmd_port_list()
 
 @app.command("port-close")
 def cmd_port_close(port: int):
+    if not check_windows():
+        return
     ports.cmd_port_close(port)
 
 @app.command("port-clean")
 def cmd_port_clean():
+    if not check_windows():
+        return
     ports.cmd_port_clean()
 
 @app.command("wifi")
 def cmd_wifi_list():
+    if not check_windows():
+        return
     wifi.cmd_wifi_list()
 
 @app.command("wifi-remove")
 def cmd_wifi_remove(ssid: str):
+    if not check_windows():
+        return
     wifi.cmd_wifi_remove(ssid)
 
 @app.command("wifi-clean")
 def cmd_wifi_clean():
+    if not check_windows():
+        return
     wifi.cmd_wifi_clean()
 
 @app.command("lock")
 def cmd_lock():
+    if not check_windows():
+        return
     import ctypes
     import subprocess
     print("Locking system...")
@@ -97,12 +107,3 @@ def cmd_lock():
     except Exception as e:
         print(f"Lock error: {e}")
     print("System locked, network disconnected.")
-
-@app.command("crypto")
-def cmd_crypto(coin: str):
-    if coin.lower() in ("btc", "bitcoin"):
-        crypto.show_crypto("btc")
-    elif coin.lower() in ("eth", "ethereum"):
-        crypto.show_crypto("eth")
-    else:
-        print("Supported: btc, eth")
