@@ -1,6 +1,4 @@
-
-**dfds**
-
+ 
 установка:
 
 `git clone https://github.com/h0nco/dfds`
