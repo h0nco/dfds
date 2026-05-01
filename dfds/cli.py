@@ -28,6 +28,11 @@ def cmd_convert(amount: float, from_curr: str, to_curr: str):
 def cmd_timer():
     timer.run_timer()
 
+@app.command("weather")
+def cmd_weather(city: str = None):
+    from dfds.weather import get_weather
+    get_weather(city)
+
 pass_app = typer.Typer(help="Manage encrypted passwords")
 
 @pass_app.command("generate")
