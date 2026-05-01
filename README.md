@@ -1,9 +1,21 @@
-CLI-утилита для IP, криптовалют, паролей, портов и Wi-Fi 
+██████╗ ███████╗██████╗ ███████╗
+██╔══██╗██╔════╝██╔══██╗██╔════╝
+██║  ██║█████╗  ██████╔╝███████╗
+██║  ██║██╔══╝  ██╔═══╝ ╚════██║
+██████╔╝██║     ██║     ███████║
+╚═════╝ ╚═╝     ╚═╝     ╚══════╝
 
 установка:
 
-git clone https://github.com/h0nco/dfds
+`git clone https://github.com/h0nco/dfds`
 
-cd dfds
+`cd dfds`
 
-pip install .
+``pip install .``
+
+
+``dfds ip
+dfds crypto
+dfds password
+dfds ports
+dfds wifi``
