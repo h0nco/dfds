@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dfds"
+version = "2.0.0"
+description = "Security & utility CLI toolkit"
+authors = [{name = "Your Name", email = "you@example.com"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "typer>=0.9.0",
+    "requests>=2.28.0",
+    "cryptography>=39.0.0"
+]
+
+[project.scripts]
+dfds = "dfds.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["dfds*"]
