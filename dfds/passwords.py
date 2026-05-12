@@ -47,7 +47,7 @@ def init_storage(master: str):
     _save_encrypted(encrypted)
     print(f"Storage created at {PASSWORDS_FILE}")
 
-def load_passwords(master: str) -> dict:
+def load_passwords(master: str) -> dict | None:
     encrypted = _load_encrypted()
     if not encrypted:
         return {}
@@ -57,6 +57,12 @@ def load_passwords(master: str) -> dict:
         return json.loads(decrypted.decode('utf-8'))
     except InvalidToken:
         print("Invalid master password or corrupted storage.")
+        return None
+    except json.JSONDecodeError:
+        print("Password storage is corrupted (invalid JSON).")
+        return None
+    except Exception as e:
+        print(f"Unexpected error while loading passwords: {e}")
         return None
 
 def save_passwords(data: dict, master: str):

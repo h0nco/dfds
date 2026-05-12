@@ -103,8 +103,8 @@ def cmd_lock():
     except Exception as e:
         print(f"Clipboard error: {e}")
     try:
-        subprocess.run('ipconfig /release', shell=True, check=False, capture_output=True)
-        subprocess.run('netsh wlan disconnect', shell=True, check=False)
+        subprocess.run('ipconfig /release', shell=True, check=False, capture_output=True, timeout=5)
+        subprocess.run('netsh wlan disconnect', shell=True, check=False, timeout=5)
     except Exception as e:
         print(f"Network error: {e}")
     try:

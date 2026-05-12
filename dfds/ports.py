@@ -18,34 +18,22 @@ def _find_system_tool(tool_name: str, fallback_path: str = None) -> str | None:
 
 
 def _get_process_info(pid: int):
-    wmic_path = _find_system_tool('wmic', r'C:\Windows\System32\wbem\wmic.exe')
-    if wmic_path:
-        try:
-            cmd = f'"{wmic_path}" process where processid={pid} get name,executablepath /format:csv'
-            out = subprocess.check_output(cmd, shell=True, text=True, encoding='cp866', errors='ignore')
-            lines = out.strip().splitlines()
-            if len(lines) >= 2:
-                parts = lines[1].split(',')
-                if len(parts) >= 3:
-                    name = parts[1].strip()
-                    path = parts[2].strip()
-                    return name, path
-        except:
-            pass
-
-    tasklist_path = _find_system_tool('tasklist', r'C:\Windows\System32\tasklist.exe')
-    if tasklist_path:
-        try:
-            cmd = f'"{tasklist_path}" /FI "PID eq {pid}" /FO CSV'
-            out = subprocess.check_output(cmd, shell=True, text=True, encoding='cp866', errors='ignore')
-            lines = out.strip().splitlines()
-            if len(lines) >= 2:
-                parts = lines[1].split('","')
-                name = parts[0].strip('"')
-                return name, ""
-        except:
-            pass
-    return None, None
+    try:
+        cmd = [
+            'powershell', '-Command',
+            f'Get-Process -Id {pid} | Select-Object -ExpandProperty Name, Path'
+        ]
+        out = subprocess.check_output(cmd, shell=False, text=True, errors='ignore', timeout=5)
+        lines = out.strip().splitlines()
+        name = lines[0] if lines else "?"
+        path = lines[1] if len(lines) > 1 else ""
+        return name, path
+    except subprocess.CalledProcessError:
+        return "?", "?"
+    except subprocess.TimeoutExpired:
+        return "?", "?"
+    except Exception:
+        return "?", "?"
 
 
 def _get_open_ports():
@@ -55,9 +43,12 @@ def _get_open_ports():
         return []
 
     try:
-        out = subprocess.check_output(f'"{netstat_path}" -ano', shell=True, text=True, encoding='cp866', errors='ignore')
+        out = subprocess.check_output(f'"{netstat_path}" -ano', shell=True, text=True, encoding='cp866', errors='ignore', timeout=5)
     except subprocess.CalledProcessError as e:
         print(f"Failed to run netstat: {e}")
+        return []
+    except subprocess.TimeoutExpired:
+        print("netstat timed out")
         return []
 
     ports = []
@@ -128,8 +119,13 @@ def cmd_port_close(port: int):
     if confirm.lower() != 'y':
         print("Cancelled.")
         return
-    subprocess.run(f'taskkill /F /PID {target["pid"]}', check=True, shell=True)
-    print(f"Process {target['name']} (PID {target['pid']}) terminated. Port {port} freed.")
+    try:
+        subprocess.run(f'taskkill /F /PID {target["pid"]}', check=True, shell=True, timeout=5)
+        print(f"Process {target['name']} (PID {target['pid']}) terminated. Port {port} freed.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to terminate process: {e}")
+    except subprocess.TimeoutExpired:
+        print("Termination command timed out.")
 
 
 def cmd_port_clean():
@@ -150,7 +146,9 @@ def cmd_port_clean():
         return
     for p in to_close:
         try:
-            subprocess.run(f'taskkill /F /PID {p["pid"]}', check=True, shell=True)
+            subprocess.run(f'taskkill /F /PID {p["pid"]}', check=True, shell=True, timeout=5)
             print(f"Terminated {p['name']} (PID {p['pid']}) on port {p['port']}")
         except subprocess.CalledProcessError as e:
             print(f"Failed to terminate PID {p['pid']}: {e}")
+        except subprocess.TimeoutExpired:
+            print(f"Timeout killing PID {p['pid']}")
