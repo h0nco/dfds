@@ -1,7 +1,13 @@
 import typer
+import ctypes
+import subprocess
+import sys
+import getpass
+from pathlib import Path
 
 from dfds import ip, crypto, convert, timer, passwords, ports, wifi
-from dfds.utils import check_windows
+from dfds.utils import check_windows, kill_untrusted_processes, disable_network, clear_clipboard, lock_workstation
+from dfds.lock import generate_key, save_key_to_usb, save_backup, run_usb_lock
 
 app = typer.Typer(help="dfds – security & utility toolkit")
 
@@ -90,25 +96,45 @@ def cmd_wifi_clean():
     wifi.cmd_wifi_clean()
 
 @app.command("lock")
-def cmd_lock():
+def cmd_lock(usb: bool = False, usb_drive: str = None):
     if not check_windows():
         return
-    import ctypes
-    import subprocess
+
+    if usb:
+        print("USB key mode enabled.")
+        key = generate_key()
+        if not usb_drive:
+            usb_drive = input("Enter USB drive letter (e.g., D: or D:\\ ): ").strip()
+            if not usb_drive.endswith(':\\'):
+                usb_drive = usb_drive.rstrip('\\') + ':\\'
+        try:
+            save_key_to_usb(key, usb_drive)
+        except Exception as e:
+            print(f"Cannot write to USB: {e}")
+            return
+        backup = getpass.getpass("Create rescue password (store it safely): ")
+        confirm = getpass.getpass("Confirm rescue password: ")
+        if backup != confirm:
+            print("Passwords do not match.")
+            return
+        save_backup(key, backup)
+        print("USB key saved. Now locking system with USB protection.")
+        disable_network()
+        kill_untrusted_processes()
+        clear_clipboard()
+        monitor_script = Path(__file__).parent / "lock" / "lock_screen.py"
+        subprocess.Popen([sys.executable, str(monitor_script), key, backup])
+        print("System locked. Insert USB key with dfds.key to unlock.")
+    else:
+        lock_system()
+
+def lock_system():
     print("Locking system...")
-    try:
-        ctypes.windll.user32.OpenClipboard(0)
-        ctypes.windll.user32.EmptyClipboard()
-        ctypes.windll.user32.CloseClipboard()
-    except Exception as e:
-        print(f"Clipboard error: {e}")
-    try:
-        subprocess.run('ipconfig /release', shell=True, check=False, capture_output=True, timeout=5)
-        subprocess.run('netsh wlan disconnect', shell=True, check=False, timeout=5)
-    except Exception as e:
-        print(f"Network error: {e}")
-    try:
-        ctypes.windll.user32.LockWorkStation()
-    except Exception as e:
-        print(f"Lock error: {e}")
-    print("System locked, network disconnected.")
+    clear_clipboard()
+    disable_network()
+    kill_untrusted_processes()
+    lock_workstation()
+    print("System locked.")
+
+if __name__ == "__main__":
+    app()
