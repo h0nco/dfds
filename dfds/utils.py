@@ -1,6 +1,11 @@
 import ctypes
 import subprocess
 import sys
+from pathlib import Path
+from dfds.config_loader import load_config
+from dfds.logger_setup import logger
+
+config = load_config()
 
 def is_admin() -> bool:
     try:
@@ -32,31 +37,30 @@ def clear_clipboard():
         ctypes.windll.user32.OpenClipboard(0)
         ctypes.windll.user32.EmptyClipboard()
         ctypes.windll.user32.CloseClipboard()
+        logger.debug("Clipboard cleared")
     except Exception as e:
-        print(f"Clipboard error: {e}")
+        logger.warning(f"Clipboard clear failed: {e}")
 
 def disable_network():
     try:
         subprocess.run('ipconfig /release', shell=True, check=False, capture_output=True, timeout=5)
         subprocess.run('netsh wlan disconnect', shell=True, check=False, timeout=5)
+        logger.info("Network disabled (IP released, Wi-Fi disconnected)")
     except Exception as e:
-        print(f"Network error: {e}")
+        logger.error(f"Network disable error: {e}")
 
 def kill_untrusted_processes():
-    untrusted = [
-        "cmd.exe", "powershell.exe", "explorer.exe", 
-        "chrome.exe", "firefox.exe", "msedge.exe",
-        "telegram.exe", "discord.exe", "skype.exe"
-    ]
+    untrusted = config.get('untrusted_processes', [])
     for proc in untrusted:
         try:
             subprocess.run(f'taskkill /F /IM {proc}', shell=True, check=False, capture_output=True, timeout=2)
+            logger.debug(f"Killed {proc}")
         except Exception:
             pass
 
 def lock_workstation():
-    """Lock the Windows workstation."""
     try:
         ctypes.windll.user32.LockWorkStation()
+        logger.info("Workstation locked")
     except Exception as e:
-        print(f"Lock error: {e}")
+        logger.error(f"Lock error: {e}")
