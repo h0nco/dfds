@@ -5,12 +5,14 @@ import sys
 import getpass
 import asyncio
 import aiohttp
+import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import signal
 import shutil
 
 from dfds import ip, crypto, convert, timer, passwords, ports, wifi
+from dfds.sysinfo import get_sysinfo
 from dfds.utils import check_windows, kill_untrusted_processes, disable_network, clear_clipboard, lock_workstation
 from dfds.lock import generate_key, save_key_to_usb, save_backup, run_usb_lock
 from dfds.usb_detector import list_usb_drives
@@ -60,6 +62,10 @@ def cmd_timer():
 def cmd_weather(city: str = None):
     from dfds.weather import get_weather
     get_weather(city)
+
+@app.command("sysinfo")
+def cmd_sysinfo():
+    get_sysinfo()
 
 pass_app = typer.Typer(help="Manage encrypted passwords")
 
